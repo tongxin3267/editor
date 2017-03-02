@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>智联web开发工具</title>
+  </head>
+  <script>window.$ = window.jQuery = require('jquery');</script>
+  <link rel="StyleSheet" href="./index.css" type="text/css" />
+
+  <body >
+
+      <div style="border: 1px solid #e1e1e8;height: 100%;position: fixed;width: 200px;overflow: scroll" id="file_container">
+
+        <ul id="browser" class="filetree treeview">
+
+          <!--<li class="collapsable"><div class="hitarea collapsable-hitarea"></div><span class="folder">Folder 1</span>-->
+            <!--<ul>-->
+              <!--<li class="last"><span class="file">Item 1.1</span></li>-->
+            <!--</ul>-->
+          <!--</li>-->
+          <!--<li class="collapsable"><div class="hitarea collapsable-hitarea"></div><span class="folder">Folder 2</span>-->
+            <!--<ul>-->
+              <!--<li class="collapsable"><div class="hitarea collapsable-hitarea"></div><span class="folder">Subfolder 2.1</span>-->
+                <!--<ul id="folder21">-->
+                  <!--<li><span class="file">File 2.1.1</span></li>-->
+                  <!--<li class="last"><span class="file">File 2.1.2</span></li>-->
+                <!--</ul>-->
+              <!--</li>-->
+              <!--<li class="last"><span class="file">File 2.2</span></li>-->
+            <!--</ul>-->
+          <!--</li>-->
+          <!--<li class="closed expandable"><div class="hitarea closed-hitarea expandable-hitarea"></div><span class="folder">Folder 3 (closed at start)</span>-->
+            <!--<ul style="display: none;">-->
+              <!--<li class="last"><span class="file">File 3.1</span></li>-->
+            <!--</ul>-->
+          <!--</li>-->
+          <!--<li class="last"><span class="file">File 4</span></li>-->
+        </ul>
+
+      </div>
+      <div id="container" style="margin-left: 200px;min-height: 728px;overflow: hidden;">
+      </div>
+
+  </body>
+  <script>
+    // require node modules before loader.js comes in
+    var path = require('path');
+    var fs = require("fs");
+    require("./src/renderer")
+    const store = require("./src/store")
+  </script>
+
+  <script src="./node_modules/monaco-editor/min/vs/loader.js"></script>
+  <script>
+    function uriFromPath(_path) {
+      var pathName = path.resolve(_path).replace(/\\/g, '/');
+      if (pathName.length > 0 && pathName.charAt(0) !== '/') {
+        pathName = '/' + pathName;
+      }
+      return encodeURI('file://' + pathName);
+    }
+
+    require.config({
+      baseUrl: uriFromPath(path.join(__dirname, './node_modules/monaco-editor/min'))
+    });
+
+    // workaround monaco-css not understanding the environment
+    self.module = undefined;
+
+    // workaround monaco-typescript not understanding the environment
+    self.process.browser = true;
+    var currentFile={};
+    var exts={
+      ".js":"javascript",
+      ".css":"css",
+      ".json":"json",
+      ".html":"html"
+    }
+    store.subscribe(function () {
+      console.log(store.getState())
+      var {file}=store.getState().editor;
+      if(currentFile!=file&&file!=undefined){
+        $("#container").empty();
+        $("#tag").html(file.base)
+        fs.readFile(file.path,'utf8', (err, data) => {
+           if (err) throw err;
+            require(['vs/editor/editor.main'], function() {
+                var editor = monaco.editor.create(document.getElementById('container'), {
+                    value: data,
+                    language:exts[file.ext]
+                });
+                //保存文件的所有修改
+                editor.onDidChangeModelContent(function () {
+                    fs.writeFile(file.path, editor.getValue(), (err) => {
+                        if (err) throw err;
+                    });
+                })
+            });
+        });
+      }
+    })
+
+
+
+  </script>
+
+</html>
