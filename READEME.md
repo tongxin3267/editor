@@ -5,3 +5,5 @@
 * monaco-editor
 * react
 * flux
+* anyproxy
+* weinre
